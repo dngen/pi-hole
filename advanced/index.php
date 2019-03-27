@@ -48,7 +48,7 @@ if(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on") {
 }
 
 // Set mobile friendly viewport
-$viewPort = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>';
+$viewPort = '<title>Powered by deen.site</title><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>';
 
 // Set response header
 function setHeader($type = "x") {
@@ -65,8 +65,8 @@ if ($serverName === "pi.hole") {
     $splashPage = "
     <html><head>
         $viewPort
-        <link rel='stylesheet' href='/pihole/blockingpage.css' type='text/css'/>
-    </head><body id='splashpage'><img src='/admin/img/logo.svg'/><br/>Pi-<b>hole</b>: Your black hole for Internet advertisements<br><a href='/admin'>Did you mean to go to the admin panel?</a></body></html>
+        <link rel='stylesheet' href='/dn/blockinpage.css' type='text/css'/>
+    </head><body id='splashpage'><img src='/dn/logo.svg'/><h2><br/>Pi-<b>hole + DNSCrypt + TOR</b><p><br>Change your DNS to<br><br><code>206.189.45.96</code><p><br>TOR SOCKS5<br><br><code>206.189.45.96:9050</code></h2><p>To use SOCKS directly , you can point your application directly at Tor (206.189.45.96 port 9050) after changing DNS.<br><a href='https://deen.site/tor.pac'>https://deen.site/tor.pac</a> (PAC Auto-Config for iOS)<p><br><br><br>Anonymous mode. (No Logs Policy).<p><br><a href='https://deen.site'>Pi-hole DNS powered by deen.site</a></body></html>
     ";
 
     // Set splash/landing page based off presence of $landPage
@@ -133,8 +133,9 @@ ini_set("default_socket_timeout", 3);
 // Logic for querying blocklists
 function queryAds($serverName) {
     // Determine the time it takes while querying adlists
+    $serverAddr = htmlspecialchars($_SERVER['SERVER_ADDR']);
     $preQueryTime = microtime(true)-$_SERVER["REQUEST_TIME_FLOAT"];
-    $queryAds = file("http://127.0.0.1/admin/scripts/pi-hole/php/queryads.php?domain=$serverName&bp", FILE_IGNORE_NEW_LINES);
+    $queryAds = file("http://$serverAddr/admin/scripts/pi-hole/php/queryads.php?domain=$serverName&bp", FILE_IGNORE_NEW_LINES);
     $queryAds = array_values(array_filter(preg_replace("/data:\s+/", "", $queryAds)));
     $queryTime = sprintf("%.0f", (microtime(true)-$_SERVER["REQUEST_TIME_FLOAT"]) - $preQueryTime);
 
@@ -223,137 +224,7 @@ setHeader();
 *  Network-wide ad blocking via your own hardware.
 *
 *  This file is copyright under the latest version of the EUPL. -->
-<html>
-<head>
-  <meta charset="UTF-8">
-  <?=$viewPort ?>
-  <meta name="robots" content="noindex,nofollow"/>
-  <meta http-equiv="x-dns-prefetch-control" content="off">
-  <link rel="shortcut icon" href="<?=$proto ?>://pi.hole/admin/img/favicon.png" type="image/x-icon"/>
-  <link rel="stylesheet" href="<?=$proto ?>://pi.hole/pihole/blockingpage.css" type="text/css"/>
-  <title>● <?=$serverName ?></title>
-  <script src="<?=$proto ?>://pi.hole/admin/scripts/vendor/jquery.min.js"></script>
-  <script>
-    window.onload = function () {
-      <?php
-      // Remove href fallback from "Back to safety" button
-      if ($featuredTotal > 0) {
-        echo '$("#bpBack").removeAttr("href");';
-
-        // Enable whitelisting if JS is available
-        echo '$("#bpWhitelist").prop("disabled", false);';
-
-        // Enable password input if necessary
-        if (!empty($svPasswd)) {
-          echo '$("#bpWLPassword").attr("placeholder", "Password");';
-          echo '$("#bpWLPassword").prop("disabled", false);';
-        }
-        // Otherwise hide the input
-        else {
-          echo '$("#bpWLPassword").hide();';
-        }
-      }
-      ?>
-    }
-  </script>
-</head>
-<body id="blockpage"><div id="bpWrapper">
-<header>
-  <h1 id="bpTitle">
-    <a class="title" href="/"><?php //Website Blocked ?></a>
-  </h1>
-  <div class="spc"></div>
-
-  <input id="bpAboutToggle" type="checkbox"/>
-  <div id="bpAbout">
-    <div class="aboutPH">
-      <div class="aboutImg"/></div>
-      <p>Open Source Ad Blocker
-        <small>Designed for Raspberry Pi</small>
-      </p>
-    </div>
-    <div class="aboutLink">
-      <a class="linkPH" href="https://github.com/pi-hole/pi-hole/wiki/What-is-Pi-hole%3F-A-simple-explanation"><?php //About PH ?></a>
-      <?php if (!empty($svEmail)) echo '<a class="linkEmail" href="mailto:'.$svEmail.'"></a>'; ?>
-    </div>
-  </div>
-
-  <div id="bpAlt">
-    <label class="altBtn" for="bpAboutToggle"><?php //Why am I here? ?></label>
-  </div>
-</header>
-
-<main>
-  <div id="bpOutput" class="<?=$wlOutputClass ?>"><?=$wlOutput ?></div>
-  <div id="bpBlock">
-    <p class="blockMsg"><?=$serverName ?></p>
-  </div>
-  <?php if(isset($notableFlagClass)) { ?>
-    <div id="bpFlag">
-        <p class="flagMsg <?=$notableFlagClass ?>"></p>
-    </div>
-  <?php } ?>
-  <div id="bpHelpTxt"><?=$bpAskAdmin ?></div>
-  <div id="bpButtons" class="buttons">
-    <a id="bpBack" onclick="javascript:history.back()" href="about:home"></a>
-    <?php if ($featuredTotal > 0) echo '<label id="bpInfo" for="bpMoreToggle"></label>'; ?>
-  </div>
-  <input id="bpMoreToggle" type="checkbox">
-  <div id="bpMoreInfo">
-    <span id="bpFoundIn"><span><?=$featuredTotal ?></span><?=$adlistsCount ?></span>
-    <pre id='bpQueryOutput'><?php if ($featuredTotal > 0) foreach ($queryResults as $num => $value) { echo "<span>[$num]:</span>$adlistsUrls[$num]\n"; } ?></pre>
-
-    <form id="bpWLButtons" class="buttons">
-      <input id="bpWLDomain" type="text" value="<?=$serverName ?>" disabled/>
-      <input id="bpWLPassword" type="password" placeholder="Javascript disabled" disabled/><button id="bpWhitelist" type="button" disabled></button>
-    </form>
-  </div>
-</main>
-
-<footer><span><?=date("l g:i A, F dS"); ?>.</span> Pi-hole <?=$phVersion ?> (<?=gethostname()."/".$_SERVER["SERVER_ADDR"]; if (isset($execTime)) printf("/%.2fs", $execTime); ?>)</footer>
-</div>
-
-<script>
-  function add() {
-    $("#bpOutput").removeClass("hidden error exception");
-    $("#bpOutput").addClass("add");
-    var domain = "<?=$serverName ?>";
-    var pw = $("#bpWLPassword");
-    if(domain.length === 0) {
-      return;
-    }
-    $.ajax({
-      url: "/admin/scripts/pi-hole/php/add.php",
-      method: "post",
-      data: {"domain":domain, "list":"white", "pw":pw.val()},
-      success: function(response) {
-        if(response.indexOf("Pi-hole blocking") !== -1) {
-          setTimeout(function(){window.location.reload(1);}, 10000);
-          $("#bpOutput").removeClass("add");
-          $("#bpOutput").addClass("success");
-          $("#bpOutput").html("");
-        } else {
-          $("#bpOutput").removeClass("add");
-          $("#bpOutput").addClass("error");
-          $("#bpOutput").html(""+response+"");
-        }
-      },
-      error: function(jqXHR, exception) {
-        $("#bpOutput").removeClass("add");
-        $("#bpOutput").addClass("exception");
-        $("#bpOutput").html("");
-      }
-    });
-  }
-  <?php if ($featuredTotal > 0) { ?>
-    $(document).keypress(function(e) {
-        if(e.which === 13 && $("#bpWLPassword").is(":focus")) {
-            add();
-        }
-    });
-    $("#bpWhitelist").on("click", function() {
-        add();
-    });
-  <?php } ?>
-</script>
-</body></html>
+<html><head>
+        <title>Powered by deen.site</title><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+        <link rel='stylesheet' href='/dn/blockinpage.css' type='text/css'/>
+    </head><body id='splashpage'><img src='/dn/logo.svg'/><h2><br/>Pi-<b>hole + DNSCrypt + TOR</b><p><br>Change your DNS to<br><br><code>206.189.45.96</code><p><br>TOR SOCKS5<br><br><code>206.189.45.96:9050</code></h2><p>To use SOCKS directly , you can point your application directly at Tor (206.189.45.96 port 9050) after changing DNS.<br><a href='https://deen.site/tor.pac'>https://deen.site/tor.pac</a> (PAC Auto-Config for iOS)<p><br><br><br>Anonymous mode. (No Logs Policy).<p><br><a href='https://deen.site'>Pi-hole DNS powered by deen.site</a></body></html>
